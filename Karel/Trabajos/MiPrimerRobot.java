@@ -9,37 +9,50 @@ public class MiPrimerRobot implements Directions
         World.readWorld("Mundo.kwld");
         World.setVisible(true);
 
-        // Coloca el robot en la posición inicial del mundo (1,1),
+        // Coloca el primer robot en la posición inicial del mundo (1,1),
         // mirando al Este, sin ninguna sirena.
         Robot Karel = new Robot(1, 1, East, 0);
 
-        // Mover el robot 4 pasos
-        Karel.move();
-        Karel.move();
-        Karel.move();
-        Karel.move();
+        // Coloca el segundo robot en la misma posición que el primer robot
+        // y le asigna el color azul.
+        Robot Azul = new Robot(1, 1, East, 0, Color.blue);
 
-        // Recoger los 5 beepers
+        // Mover los robots alternadamente 4 pasos
+        Karel.move();
+        Azul.move();
+        Karel.move();
+        Azul.move();
+        Karel.move();
+        Azul.move();
+        Karel.move();
+        Azul.move();
+
+        // Solo el primer robot recoge los 5 beepers
         Karel.pickBeeper();
         Karel.pickBeeper();
         Karel.pickBeeper();
         Karel.pickBeeper();
         Karel.pickBeeper();
-        
-        // Girar a la izquierda y salir de los muros
+
+        // Girar a la izquierda y salir de los muros alternadamente
         Karel.turnLeft();
+        Azul.turnLeft();
         Karel.move();
+        Azul.move();
         Karel.move();
+        Azul.move();
 
-        // Poner los beepers fuera de los muros
+        // Solo el primer robot coloca los beepers fuera de los muros
         Karel.putBeeper();
         Karel.putBeeper();
         Karel.putBeeper();
         Karel.putBeeper();
         Karel.putBeeper();
 
-        // Ponerse en otra posición y apagar el robot
+        // Moverse a otra posición y apagar ambos robots
         Karel.move();
+        Azul.move();
         Karel.turnOff();
+        Azul.turnOff();
     }
 }
