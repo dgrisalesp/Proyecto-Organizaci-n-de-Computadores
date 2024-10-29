@@ -1,1 +1,3 @@
-java -cp ".;KarelJRobot.jar" %1
+java -cp ".;KarelJRobot.jar" MiPrimerRobot
+pause
+exit
