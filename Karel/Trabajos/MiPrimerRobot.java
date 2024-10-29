@@ -9,12 +9,43 @@ class Racer extends Robot implements Runnable {
     }
 
     // Método que define el recorrido del robot
-    public void race()
-        { while(! nextToABeeper())
-        move();
-        pickBeeper();
-        turnOff();
+    public void race() {
+        // Mover el robot 4 pasos
+        for (int i = 0; i < 4; i++) {
+            if (frontIsClear()) {
+                move();
+            }
         }
+
+        // Recoger los 5 beepers si están presentes
+        for (int i = 0; i < 5; i++) {
+            if (nextToABeeper()) {
+                pickBeeper();
+            }
+        }
+
+        // Girar a la izquierda y salir de los muros
+        turnLeft();
+        if (frontIsClear()) {
+            move();
+        }
+        if (frontIsClear()) {
+            move();
+        }
+
+        // Poner los beepers fuera de los muros si tiene en la bolsa
+        for (int i = 0; i < 5; i++) {
+            if (anyBeepersInBeeperBag()) {
+                putBeeper();
+            }
+        }
+
+        // Moverse a otra posición y apagar el robot
+        if (frontIsClear()) {
+            move();
+        }
+        turnOff();
+    }
 
     // Método que activa el hilo y ejecuta el recorrido
     public void run() {
@@ -22,7 +53,7 @@ class Racer extends Robot implements Runnable {
     }
 }
 
-public class MiPrimerRobot implements Directions { // Implementa Directions para acceder a las constantes de dirección
+public class MiPrimerRobot implements Directions {
     public static void main(String[] args) {
         // Configuramos el mundo
         World.readWorld("Mundo.kwld");
@@ -31,8 +62,9 @@ public class MiPrimerRobot implements Directions { // Implementa Directions para
         // Crear el primer robot en la posición inicial
         Racer first = new Racer(1, 1, East, 0, Color.GREEN);
 
-        // Crear el segundo robot en la misma posición con color azul
-        Racer second = new Racer(2, 1, East, 0, Color.BLUE);
+        // Crear el segundo robot en una posición diferente con color azul
+        Racer second = new Racer(1, 1, East, 0, Color.BLUE);
+
         // Crear hilos para los robots
         Thread thread1 = new Thread(first);
         Thread thread2 = new Thread(second);
