@@ -1,76 +1,42 @@
 import kareltherobot.*;
 import java.awt.Color;
 
-// Definición de la clase Racer que extiende Robot y permite ejecutar en un hilo
-class Racer extends Robot implements Runnable {
-    public Racer(int street, int avenue, Direction direction, int beepers, Color color) {
-        super(street, avenue, direction, beepers, color);
-        World.setupThread(this); // Configuración del hilo para el robot
-    }
-
-    // Método que define el recorrido del robot
-    public void race() {
-        // Mover el robot 4 pasos
-        for (int i = 0; i < 4; i++) {
-            if (frontIsClear()) {
-                move();
-            }
-        }
-
-        // Recoger los 5 beepers si están presentes
-        for (int i = 0; i < 5; i++) {
-            if (nextToABeeper()) {
-                pickBeeper();
-            }
-        }
-
-        // Girar a la izquierda y salir de los muros
-        turnLeft();
-        if (frontIsClear()) {
-            move();
-        }
-        if (frontIsClear()) {
-            move();
-        }
-
-        // Poner los beepers fuera de los muros si tiene en la bolsa
-        for (int i = 0; i < 5; i++) {
-            if (anyBeepersInBeeperBag()) {
-                putBeeper();
-            }
-        }
-
-        // Moverse a otra posición y apagar el robot
-        if (frontIsClear()) {
-            move();
-        }
-        turnOff();
-    }
-
-    // Método que activa el hilo y ejecuta el recorrido
-    public void run() {
-        race();
-    }
-}
-
 public class MiPrimerRobot implements Directions {
+
     public static void main(String[] args) {
-        // Configuramos el mundo
-        World.readWorld("Mundo.kwld");
+        // Configuración del mundo
+        World.readWorld("EvacuationZone.kwld"); // Archivo del mundo generado o provisto
         World.setVisible(true);
+        World.setDelay(15); // Configura la velocidad de ejecución
 
-        // Crear el primer robot en la posición inicial
-        Racer first = new Racer(1, 1, East, 0, Color.GREEN);
+        // Obtener el número de robots de los argumentos
+        int robotCount = getRobotCountFromArgs(args);
 
-        // Crear el segundo robot en una posición diferente con color azul
-        Racer second = new Racer(1, 1, East, 0, Color.BLUE);
+        // Crear e iniciar los robots de rescate
+        for (int i = 0; i < robotCount; i++) {
+            // Cada robot comienza en una posición diferente en la avenida 1
+            RescueRobot robot = new Rescate(1 + i, 1, East, 0, Color.BLUE);
+            new Thread(robot).start(); // Iniciar el robot en un hilo separado
+        }
+    }
 
-        // Crear hilos para los robots
-        Thread thread1 = new Thread(first);
-        Thread thread2 = new Thread(second);
-
-        // Iniciar los hilos para que ambos robots comiencen en paralelo
-        thread1.start();
-        thread2.start();
+    public static int getRobotCountFromArgs(String[] args) {
+        // Leer el argumento -r seguido de la cantidad de robots
+        int count = 1; // Valor predeterminado
+        for (int i = 0; i < args.length; i++) {
+            if (args[i].equals("-r") && i + 1 < args.length) {
+                try {
+                    count = Integer.parseInt(args[i + 1]);
+                    if (count < 1 || count > 15) {
+                        System.out.println("Número de robots fuera de rango (1-15). Usando valor predeterminado (1).");
+                        count = 1; // Asigna el valor predeterminado si está fuera del rango
+                    }
+                } catch (NumberFormatException e) {
+                    System.out.println("Formato incorrecto para la cantidad de robots. Usando valor predeterminado (1).");
+                    count = 1;
+                }
+            }
+        }
+        return count;
     }
 }
