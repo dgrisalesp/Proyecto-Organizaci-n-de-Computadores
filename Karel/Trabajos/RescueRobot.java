@@ -16,6 +16,7 @@ class RescueRobot extends Robot implements Runnable {
     private RobotState currentState;
     private static final RescueManager manager = new RescueManager();
     private byte[][] matrix;
+    private boolean destiny;
 
     public RescueRobot(int robotId, int street, int avenue, Direction direction, int beepers, Color color) {
 
@@ -24,6 +25,7 @@ class RescueRobot extends Robot implements Runnable {
         this.currentAvenue = avenue;
         this.currentStreet = street;
         this.currentState = new InitializingState();
+        this.destiny=false;
         this.matrix = new byte[][] {
                 { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 },
                 { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 },
@@ -76,6 +78,27 @@ class RescueRobot extends Robot implements Runnable {
     public void log(String message) {
         System.out.println("Robot " + robotId + ": " + message);
     }
+    public void turnLeft() {
+        super.turnLeft();
+        int[][] directions = {
+            { 1, 0 }, // north
+            { -1, 0 }, // south
+            { 0, -1 }, // west
+            { 0, 1 } // east
+    };
+    int direction = facingNorth() ? 0 : facingSouth() ? 1 : facingWest() ? 2 : 3;
+    int nx, ny;
+    
+    nx = (this.getStreet() -1)* 2 + directions[direction][0];
+    ny = (this.getAvenue()-1) * 2 + directions[direction][1];
+    if (nx >= 0 && nx < this.matrix.length && ny >= 0 && ny < this.matrix[0].length && this.matrix[nx][ny] == 5) {
+        if (frontIsClear()){
+            this.matrix[nx][ny] = 1;
+        }else{
+            this.matrix[nx][ny] = 0;
+        }
+    }
+}
 
     public void move() {
         super.move();
@@ -155,6 +178,9 @@ class RescueRobot extends Robot implements Runnable {
             turnLeft();
         }
     }
+    public void setDestiny(boolean destiny){
+        this.destiny=destiny;
+    }
 
     public void rescuePeople() {
         synchronized (manager) {
@@ -167,7 +193,8 @@ class RescueRobot extends Robot implements Runnable {
 
     }
 
-    public ArrayList<Point> findPath(Point current, Point destination) {
+    public ArrayList<Point> findPath(Point current, Point destination, boolean seek) {
+        
         Queue<Register> queue = new LinkedList<>();
         Set<Point> visited = new HashSet<>();
         visited.add(current);
@@ -209,7 +236,8 @@ class RescueRobot extends Robot implements Runnable {
                 int ny2 = y + 2 * direction[1];
                 if (nx >= 0 && nx < this.matrix.length && ny >= 0 && ny < this.matrix[0].length && this.matrix[nx][ny] != 0
                         && !visited.contains(new Point(nx, ny)) && nx2 >= 0 && nx2 < this.matrix.length && ny2 >= 0
-                        && ny2 < this.matrix[0].length && !visited.contains(new Point(nx2, ny2))) {
+                        && ny2 < this.matrix[0].length && !visited.contains(new Point(nx2, ny2)) && (!seek || (seek && this.matrix[nx2][ny2] == 1))) {
+                            
                     // System.out.println("I printed something");
                     visited.add(new Point(nx2,ny2));
                     visited.add(new Point(nx, ny));
@@ -240,20 +268,44 @@ class RescueRobot extends Robot implements Runnable {
                 int nx, ny;
                 nx = (this.getStreet() -1)* 2 + directions[direction][0];
                 ny = (this.getAvenue()-1) * 2 + directions[direction][1];
-
+                
                 try {
                     this.matrix[nx][ny] = 0;
                 } catch (Exception e) {
-
+                    
                 }
                 return point;
             } else {
                 i++;
-                this.matrix[(point.getX()-1) * 2][(point.getY()-1) * 2] = 1;
+                this.matrix[(this.getStreet()-1) * 2][(this.getAvenue()-1) * 2] = 1;
+                if (nextToABeeper() && (this.getAvenue()-1) * 2 >=8 && (this.getAvenue()-1) * 2 <= 28) {
+                    this.rescuingPeople();
+                }
             }
         }
         return path.get(path.size() - 1);
     }
+    
+    
+    
+    public void rescuingPeople(){
+    this.rescuePeople();
+    if (this.rescuedPeople>=4 || this.destiny==true){
+        Point currentPoint= new Point((this.getStreet()-1)*2, (this.getAvenue()-1)*2);
+        Point destinationPoint = new Point(0, 2);
+        do {
+            ArrayList<Point> newPath = this.findPath(currentPoint, destinationPoint, true);
+            Point result=this.moving(newPath);
+            currentPoint = new Point((this.getStreet()-1) * 2, (this.getAvenue()-1) * 2);
+        } while (!currentPoint.equals(destinationPoint));
+
+
+        while(anyBeepersInBeeperBag()){
+            putBeeper();
+            this.rescuedPeople--;
+        }   
+    }
+}
 
     public void printMatrix() { 
         for (int i = 0; i < this.matrix.length; i++) {
@@ -277,7 +329,7 @@ class RescueRobot extends Robot implements Runnable {
         for (int i = 0; i < robotCount; i++) {
             // RescueRobot robot = new RescueRobot(i + 1, i + 1, 1, East, 0,
             // Config.getColor());
-            RescueRobot robot = new RescueRobot(i + 1, 1, 5, East, 0, Config.getColor());
+            RescueRobot robot = new RescueRobot(i + 1, 1, 1, East, 0, Config.getColor());
             Thread thread = new Thread(robot);
             thread.start();
         }
@@ -290,28 +342,47 @@ interface RobotState {
 
 class InitializingState implements RobotState {
     public void handle(RescueRobot robot) {
-        robot.log("Initializing position...");
-        // robot.moveToPosition(1, 1);
-        robot.setState(new ApproachingState());
+        // robot.log("Initializing position...");
+        // robot.moveToPosition(1, 5);
+        robot.setState(new SearchingState());
     }
 }
 
 class ApproachingState implements RobotState {
     public void handle(RescueRobot robot) {
         robot.log("Approaching to entry...");
-        System.out.println(robot.moveToPosition(1, 5));
-        robot.setState(new SearchingState());
+        // Point current = new Point((robot.getStreet()-1)*2, (robot.getAvenue()-1)*2);
+        // Point destination = new Point(14, 26);
+        // Point result;
+        // do {
+        //     ArrayList<Point> path = robot.findPath(current, destination, false);
+        //     for (Point point : path) {
+        //         System.out.println(point + " ");
+        //     }
+        //     System.out.println();
+        //     System.out.println();
+        //     result = robot.moving(path);
+        //     System.out.println("Result that arrived: " + result);
+        //     current = new Point((robot.getStreet()-1) * 2, (robot.getAvenue()-1) * 2);
+        //     System.out.println();
+        //     System.out.println();
+        //     System.out.println();
+        //     System.out.println(current);
+        //     robot.printMatrix();
+        //     System.out.println();
+        //     System.out.println();
+        // } while (!current.equals(destination));
     }
 }
 
 class SearchingState implements RobotState {
     public void handle(RescueRobot robot) {
         robot.log("Searching for people...");
-        Point current = new Point(0, 8);
+        Point current = new Point(2*(robot.getStreet()-1), 2*(robot.getAvenue()-1));
         Point destination = new Point(14, 26);
         Point result;
         do {
-            ArrayList<Point> path = robot.findPath(current, destination);
+            ArrayList<Point> path = robot.findPath(current, destination, false);
             for (Point point : path) {
                 System.out.println(point + " ");
             }
@@ -328,8 +399,25 @@ class SearchingState implements RobotState {
             System.out.println();
             System.out.println();
         } while (!current.equals(destination));
-        robot.rescuePeople();
-        robot.setState(new ReturningState());
+        robot.log("Finished");
+        robot.setDestiny(true);
+        robot.rescuingPeople();
+        robot.log("Finished RescuingPeople");
+        current.setX((robot.getStreet()-1)*2);
+        current.setY((robot.getAvenue()-1)*2);
+        destination=new Point(0,0);
+        do {
+            ArrayList<Point> path = robot.findPath(current, destination, false);
+            result = robot.moving(path);
+            current = new Point((robot.getStreet()-1) * 2, (robot.getAvenue()-1) * 2);
+        } while (!current.equals(destination));
+        robot.log("Ready to turn off");
+        robot.turnOff();
+        while (true){
+
+        }
+        // robot.rescuePeople();
+        // robot.setState(new ReturningState());
     }
 }
 
@@ -339,6 +427,7 @@ class ReturningState implements RobotState {
         robot.moveToPosition(1, 1);
         while (robot.anyBeepersInBeeperBag()) {
             robot.putBeeper();
+
         }
         robot.log("Completed rescue mission.");
         robot.turnOff();
