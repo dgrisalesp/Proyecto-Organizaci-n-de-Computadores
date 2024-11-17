@@ -317,7 +317,7 @@ class RescueRobot extends Robot implements Runnable {
                     return;
                     }
                 }
-                if (this.sharedGrid.getValue(i,j)==5){
+                if (this.sharedGrid.getValue(2*(i-1),2*(j-1))==5){
                     this.goTo(i,j);
                 }
             }
