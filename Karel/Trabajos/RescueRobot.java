@@ -155,14 +155,11 @@ class RescueRobot extends Robot implements Runnable {
 
     public void rescuePeople() {
         synchronized (manager) {
-            int temp=this.sharedGrid.getValue((this.getStreet()-1) * 2, (this.getAvenue()-1) * 2);
-            while (nextToABeeper() && rescuedPeople < MAX_PEOPLE && this.sharedGrid.getValue((this.getStreet()-1) * 2, (this.getAvenue()-1) * 2) != -1) {
-                this.sharedGrid.setValue((this.getStreet()-1) * 2, (this.getAvenue()-1) * 2,-1);
+            while (nextToABeeper() && rescuedPeople < MAX_PEOPLE) {
                 pickBeeper();
                 rescuedPeople++;
                 log("Rescued a person. Total rescued: " + rescuedPeople);
             }
-            this.sharedGrid.setValue((this.getStreet()-1) * 2, (this.getAvenue()-1) * 2,temp);
 
             if (nextToABeeper()){
                 this.sharedGrid.addBeeper(this.getStreet(), this.getAvenue());
