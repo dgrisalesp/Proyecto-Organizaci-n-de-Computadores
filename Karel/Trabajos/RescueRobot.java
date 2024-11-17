@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentMap;
 import javax.print.attribute.standard.PrinterResolution;
 
 class RescueRobot extends Robot implements Runnable {
+    private final SharedGrid sharedGrid;
     private static final int MAX_PEOPLE = Config.MAX_PEOPLE;
     private int rescuedPeople = 0;
     private int robotId;
@@ -18,51 +19,15 @@ class RescueRobot extends Robot implements Runnable {
     private byte[][] matrix;
     private boolean destiny;
 
-    public RescueRobot(int robotId, int street, int avenue, Direction direction, int beepers, Color color) {
-
+    public RescueRobot(int robotId, int street, int avenue, Direction direction, int beepers, Color color, SharedGrid sharedGrid) {
         super(street, avenue, direction, beepers, color);
+        this.sharedGrid = sharedGrid;
         this.robotId = robotId;
         this.currentAvenue = avenue;
         this.currentStreet = street;
         this.currentState = new InitializingState();
-        this.destiny=false;
-        this.matrix = new byte[][] {
-                { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 },
-                { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 },
-                { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 },
-                { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 },
-                { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 },
-                { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 },
-                { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 },
-                { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 },
-                { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 },
-                { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 },
-                { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 },
-                { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 },
-                { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 },
-                { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 },
-                { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 },
-                { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 },
-                { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 },
-                { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 },
-                { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 },
-                { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 },
-                { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 },
-                { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 },
-                { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 },
-                { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 },
-                { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 },
-                { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 },
-                { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 },
-                { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 },
-                { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 },
-                { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 },
-        };
     }
 
-    public byte[][] getMatrix() {
-        return this.matrix;
-    }
 
     @Override
     public void run() {
@@ -91,11 +56,11 @@ class RescueRobot extends Robot implements Runnable {
     
     nx = (this.getStreet() -1)* 2 + directions[direction][0];
     ny = (this.getAvenue()-1) * 2 + directions[direction][1];
-    if (nx >= 0 && nx < this.matrix.length && ny >= 0 && ny < this.matrix[0].length && this.matrix[nx][ny] == 5) {
+    if (nx >= 0 && nx < this.sharedGrid.getGrid().length && ny >= 0 && ny < this.sharedGrid.getGrid()[0].length && this.sharedGrid.getValue(nx,ny) == 5) {
         if (frontIsClear()){
-            this.matrix[nx][ny] = 1;
+            this.sharedGrid.setValue(nx, ny, 1);
         }else{
-            this.matrix[nx][ny] = 0;
+            this.sharedGrid.setValue(nx, ny, 0);
         }
     }
 }
@@ -234,9 +199,9 @@ class RescueRobot extends Robot implements Runnable {
                 int ny = y + direction[1];
                 int nx2 = x + 2 * direction[0];
                 int ny2 = y + 2 * direction[1];
-                if (nx >= 0 && nx < this.matrix.length && ny >= 0 && ny < this.matrix[0].length && this.matrix[nx][ny] != 0
-                        && !visited.contains(new Point(nx, ny)) && nx2 >= 0 && nx2 < this.matrix.length && ny2 >= 0
-                        && ny2 < this.matrix[0].length && !visited.contains(new Point(nx2, ny2)) && (!seek || (seek && this.matrix[nx2][ny2] == 1))) {
+                if (nx >= 0 && nx < this.sharedGrid.getLength() && ny >= 0 && ny < this.sharedGrid.getWidth() && this.sharedGrid.getValue(nx, ny) != 0
+                        && !visited.contains(new Point(nx, ny)) && nx2 >= 0 && nx2 < this.sharedGrid.getLength() && ny2 >= 0
+                        && ny2 < this.sharedGrid.getWidth() && !visited.contains(new Point(nx2, ny2)) && (!seek || (seek && this.sharedGrid.getValue(nx2,ny2) == 1))) {
                             
                     // System.out.println("I printed something");
                     visited.add(new Point(nx2,ny2));
@@ -270,14 +235,14 @@ class RescueRobot extends Robot implements Runnable {
                 ny = (this.getAvenue()-1) * 2 + directions[direction][1];
                 
                 try {
-                    this.matrix[nx][ny] = 0;
+                    this.sharedGrid.setValue(nx,ny,0);
                 } catch (Exception e) {
                     
                 }
                 return point;
             } else {
                 i++;
-                this.matrix[(this.getStreet()-1) * 2][(this.getAvenue()-1) * 2] = 1;
+                this.sharedGrid.setValue((this.getStreet()-1) * 2,(this.getAvenue()-1) * 2,1);
                 if (nextToABeeper() && (this.getAvenue()-1) * 2 >=8 && (this.getAvenue()-1) * 2 <= 28) {
                     this.rescuingPeople();
                 }
@@ -307,14 +272,14 @@ class RescueRobot extends Robot implements Runnable {
     }
 }
 
-    public void printMatrix() { 
-        for (int i = 0; i < this.matrix.length; i++) {
-            for (int j = 0; j < this.matrix[0].length; j++) {
-                System.out.print(this.matrix[i][j] + " ");
-            }
-            System.out.println();
-        }
-    }
+    // public void printMatrix() { 
+    //     for (int i = 0; i < this.sharedGrid.getLength(); i++) {
+    //         for (int j = 0; j < this.sharedGrid.getWidth(); j++) {
+    //             System.out.print(this.sharedGrid.getValue(i,j) + " ");
+    //         }
+    //         System.out.println();
+    //     }
+    // }
 
     public static void main(String[] args) {
         if (args.length < 1 || !args[0].matches("\\d+")) {
@@ -325,11 +290,11 @@ class RescueRobot extends Robot implements Runnable {
         World.setDelay(Config.WORLD_DELAY);
         World.readWorld(Config.WORLD_FILE);
         World.setVisible(true);
-
+        SharedGrid sharedGrid = new SharedGrid();
         for (int i = 0; i < robotCount; i++) {
             // RescueRobot robot = new RescueRobot(i + 1, i + 1, 1, East, 0,
             // Config.getColor());
-            RescueRobot robot = new RescueRobot(i + 1, 1, 1, East, 0, Config.getColor());
+            RescueRobot robot = new RescueRobot(i + 1, 1, 1, East, 0, Config.getColor(),sharedGrid);
             Thread thread = new Thread(robot);
             thread.start();
         }
@@ -383,21 +348,21 @@ class SearchingState implements RobotState {
         Point result;
         do {
             ArrayList<Point> path = robot.findPath(current, destination, false);
-            for (Point point : path) {
-                System.out.println(point + " ");
-            }
-            System.out.println();
-            System.out.println();
+            // for (Point point : path) {
+            //     System.out.println(point + " ");
+            // }
+            // System.out.println();
+            // System.out.println();
             result = robot.moving(path);
-            System.out.println("Result that arrived: " + result);
+            // System.out.println("Result that arrived: " + result);
             current = new Point((robot.getStreet()-1) * 2, (robot.getAvenue()-1) * 2);
-            System.out.println();
-            System.out.println();
-            System.out.println();
-            System.out.println(current);
-            robot.printMatrix();
-            System.out.println();
-            System.out.println();
+            // System.out.println();
+            // System.out.println();
+            // System.out.println();
+            // System.out.println(current);
+            // robot.printMatrix();
+            // System.out.println();
+            // System.out.println();
         } while (!current.equals(destination));
         robot.log("Finished");
         robot.setDestiny(true);
