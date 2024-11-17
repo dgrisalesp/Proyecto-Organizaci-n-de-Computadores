@@ -99,7 +99,6 @@ class RescueRobot extends Robot implements Runnable {
     }
 
     public int moveToPosition(int targetStreet, int targetAvenue) {
-        System.out.println("Moving to position: " + targetStreet + ", " + targetAvenue);
         if (getStreet() != targetStreet) {
             if (getStreet() < targetStreet)
                 alignNorth();
@@ -124,7 +123,6 @@ class RescueRobot extends Robot implements Runnable {
                     return -1;
             }
         }
-        System.out.println("Arrived");
         return 1;
     }
 
@@ -199,7 +197,6 @@ class RescueRobot extends Robot implements Runnable {
                 // }
                 ArrayList<Point> finalPath = new ArrayList<>();
                 for (Point point : currentPath) {
-                    System.out.println(point);
                     if (point.getX() % 2 == 0 && point.getY() % 2 == 0) {
                         finalPath.add(new Point(point.getX() / 2 + 1, point.getY() / 2 + 1));
                     }
@@ -383,6 +380,7 @@ class RescueRobot extends Robot implements Runnable {
                     this.setMinI(cruce.getX());
                     this.setMinJ(cruce.getY());
                     this.setMaxI(cruce.getX());
+                    log("Le hice un cruce");
                     this.explorer();
                 }
             }
@@ -391,7 +389,10 @@ class RescueRobot extends Robot implements Runnable {
         this.goTo(this.robotId,1);
         turnOff();
     }
-    
+    public void turnOff(){
+        alignNorth();
+        super.turnOff();
+    }
     
     public static void main(String[] args) {
         if (args.length < 1 || !args[0].matches("\\d+")) {
@@ -412,7 +413,6 @@ class RescueRobot extends Robot implements Runnable {
             
             RescueRobot robot = new RescueRobot(i + 1, 1, 1, East, 0, Config.getColor(),sharedGrid, min);
             robot.setMaxI(min);
-            System.out.println(i+1+" Robot ID");
             min+=div;
 
             Thread thread = new Thread(robot);
@@ -429,8 +429,6 @@ class InitializingState implements RobotState {
     public void handle(RescueRobot robot) {
         // robot.log("Initializing position...");
         // robot.moveToPosition(1, 5);
-        System.out.println(robot.getMinI()+" RobotMinI");
-        System.out.println(robot.getMaxI()+ " RobotMaxI");
         robot.explorer();
         robot.setState(new SearchingState());
     }
