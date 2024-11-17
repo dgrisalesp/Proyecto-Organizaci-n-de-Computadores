@@ -1,3 +1,3 @@
-javac -d . -cp ".;KarelJRobot.jar" Rescate.java
+javac -d . -cp ".;KarelJRobot.jar" RescueRobot.java
 pause
 exit
