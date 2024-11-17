@@ -18,14 +18,22 @@ class RescueRobot extends Robot implements Runnable {
     private static final RescueManager manager = new RescueManager();
     private byte[][] matrix;
     private boolean destiny;
+    private int maxI;
+    private int maxJ;
+    private int minI;
+    private int minJ;
 
-    public RescueRobot(int robotId, int street, int avenue, Direction direction, int beepers, Color color, SharedGrid sharedGrid) {
+    public RescueRobot(int robotId, int street, int avenue, Direction direction, int beepers, Color color, SharedGrid sharedGrid, int minI) {
         super(street, avenue, direction, beepers, color);
         this.sharedGrid = sharedGrid;
         this.robotId = robotId;
         this.currentAvenue = avenue;
         this.currentStreet = street;
+        this.minI=minI;
+        this.minJ=4;
+        this.maxJ=15;
         this.currentState = new InitializingState();
+
     }
 
 
@@ -154,6 +162,9 @@ class RescueRobot extends Robot implements Runnable {
                 rescuedPeople++;
                 log("Rescued a person. Total rescued: " + rescuedPeople);
             }
+            if (nextToABeeper()){
+                this.sharedGrid.addBeeper(this.getStreet(), this.getAvenue());
+            }
         }
 
     }
@@ -221,7 +232,10 @@ class RescueRobot extends Robot implements Runnable {
         for (Point point : path) {
             // System.out.println("Calling moveToPosition: "+point.getX()+",
             // "+point.getY());
+
+            this.sharedGrid.setValue((this.getStreet()-1) * 2,(this.getAvenue()-1) * 2,1);
             int answer = moveToPosition(point.getX(), point.getY());
+
             if (answer != 1) {
                 int[][] directions = {
                         { 1, 0 }, // north
@@ -242,7 +256,6 @@ class RescueRobot extends Robot implements Runnable {
                 return point;
             } else {
                 i++;
-                this.sharedGrid.setValue((this.getStreet()-1) * 2,(this.getAvenue()-1) * 2,1);
                 if (nextToABeeper() && (this.getAvenue()-1) * 2 >=8 && (this.getAvenue()-1) * 2 <= 28) {
                     this.rescuingPeople();
                 }
@@ -280,7 +293,102 @@ class RescueRobot extends Robot implements Runnable {
     //         System.out.println();
     //     }
     // }
-
+    public void goTo(int x, int y){
+        
+     Point current = new Point(2*(this.getStreet()-1), 2*(this.getAvenue()-1));
+        Point destination = new Point(2*(x-1),2*(y-1) );
+        Point result;
+        do {
+            ArrayList<Point> path = this.findPath(current, destination, false);
+            result = this.moving(path);
+            current = new Point((this.getStreet()-1) * 2, (this.getAvenue()-1) * 2);
+        } while (!current.equals(destination));
+    
+    }
+    public void explorer(){
+        for (int i=this.minI; i<=this.maxI; i++){
+            for (int j=this.minJ; j<=this.maxJ; j++){
+                if (this.sharedGrid.isBeeper()){
+                    Point beeper=this.sharedGrid.takeBeeper();
+                    if (beeper != null){
+                    this.sharedGrid.addCruce(i, j);
+                    this.goTo(beeper.getX(), beeper.getY());
+                    this.waiting();
+                    return;
+                    }
+                }
+                if (this.sharedGrid.getValue(i,j)==5){
+                    this.goTo(i,j);
+                }
+            }
+        }
+        this.sharedGrid.addCompleted();
+        this.waiting();
+    }
+    public int getMaxI(){
+        return this.maxI;
+    }
+    public int getMinI(){
+        return this.minI;
+    }
+    public void setMaxI(int minI) {
+        int robots = this.sharedGrid.getRobots();
+        int length = this.sharedGrid.getLength() / 2;
+        int div = length / robots;
+        int remainder = length % robots;  // Handle any remainder in division
+    
+        int tempMax = 0;
+    
+        for (int i = 0; i < robots; i++) {
+            // Calculate the range for each robot based on div and remainder
+            int currentMax = tempMax + div + (i < remainder ? 1 : 0); // Distribute remainder across initial robots
+    
+            if (minI < currentMax) {
+                this.maxI = currentMax;
+                return; // Exit early after setting maxI
+            }
+    
+            tempMax = currentMax; // Move to next range for the next robot
+        }
+    
+        // If minI is outside calculated ranges, set maxI to the full length (edge case)
+        this.maxI = length;
+    }
+    public void setMinI(int minI){
+        this.minI=minI;
+    }
+    public void setMinJ(int minJ){
+        this.minJ=minJ;
+    }
+    public void waiting(){
+        if (anyBeepersInBeeperBag()){
+            this.goTo(1,2);
+            this.rescuingPeople();
+        }
+        while (this.sharedGrid.getCompleted()<this.sharedGrid.getRobots() || (this.sharedGrid.isBeeper() || this.sharedGrid.isCruce())){
+            if (this.sharedGrid.isBeeper()){
+                Point beeper=this.sharedGrid.takeBeeper();
+                if (beeper != null){
+                    this.goTo(beeper.getX(), beeper.getY());
+                }
+            }
+            if (this.sharedGrid.isCruce()){
+                Point cruce=this.sharedGrid.takeCruce();
+                if (cruce != null){
+                    this.goTo(cruce.getX(), cruce.getY());
+                    this.setMinI(cruce.getX());
+                    this.setMinJ(cruce.getY());
+                    this.setMaxI(cruce.getX());
+                    this.explorer();
+                }
+            }
+            
+        }
+        this.goTo(this.robotId,1);
+        turnOff();
+    }
+    
+    
     public static void main(String[] args) {
         if (args.length < 1 || !args[0].matches("\\d+")) {
             throw new IllegalArgumentException("Debe proporcionar un número válido de robots como argumento.");
@@ -290,11 +398,19 @@ class RescueRobot extends Robot implements Runnable {
         World.setDelay(Config.WORLD_DELAY);
         World.readWorld(Config.WORLD_FILE);
         World.setVisible(true);
-        SharedGrid sharedGrid = new SharedGrid();
+        SharedGrid sharedGrid = new SharedGrid(robotCount);
+        int length=(int)sharedGrid.getLength()/2;
+        int div=(int)length/robotCount;
+        int min=1;
         for (int i = 0; i < robotCount; i++) {
             // RescueRobot robot = new RescueRobot(i + 1, i + 1, 1, East, 0,
             // Config.getColor());
-            RescueRobot robot = new RescueRobot(i + 1, 1, 1, East, 0, Config.getColor(),sharedGrid);
+            
+            RescueRobot robot = new RescueRobot(i + 1, 1, 1, East, 0, Config.getColor(),sharedGrid, min);
+            robot.setMaxI(min);
+            System.out.println(i+1+" Robot ID");
+            min+=div;
+
             Thread thread = new Thread(robot);
             thread.start();
         }
@@ -309,6 +425,9 @@ class InitializingState implements RobotState {
     public void handle(RescueRobot robot) {
         // robot.log("Initializing position...");
         // robot.moveToPosition(1, 5);
+        System.out.println(robot.getMinI()+" RobotMinI");
+        System.out.println(robot.getMaxI()+ " RobotMaxI");
+        robot.explorer();
         robot.setState(new SearchingState());
     }
 }
@@ -316,6 +435,7 @@ class InitializingState implements RobotState {
 class ApproachingState implements RobotState {
     public void handle(RescueRobot robot) {
         robot.log("Approaching to entry...");
+
         // Point current = new Point((robot.getStreet()-1)*2, (robot.getAvenue()-1)*2);
         // Point destination = new Point(14, 26);
         // Point result;
@@ -342,45 +462,25 @@ class ApproachingState implements RobotState {
 
 class SearchingState implements RobotState {
     public void handle(RescueRobot robot) {
-        robot.log("Searching for people...");
-        Point current = new Point(2*(robot.getStreet()-1), 2*(robot.getAvenue()-1));
-        Point destination = new Point(14, 26);
-        Point result;
-        do {
-            ArrayList<Point> path = robot.findPath(current, destination, false);
-            // for (Point point : path) {
-            //     System.out.println(point + " ");
-            // }
-            // System.out.println();
-            // System.out.println();
-            result = robot.moving(path);
-            // System.out.println("Result that arrived: " + result);
-            current = new Point((robot.getStreet()-1) * 2, (robot.getAvenue()-1) * 2);
-            // System.out.println();
-            // System.out.println();
-            // System.out.println();
-            // System.out.println(current);
-            // robot.printMatrix();
-            // System.out.println();
-            // System.out.println();
-        } while (!current.equals(destination));
-        robot.log("Finished");
-        robot.setDestiny(true);
-        robot.rescuingPeople();
-        robot.log("Finished RescuingPeople");
-        current.setX((robot.getStreet()-1)*2);
-        current.setY((robot.getAvenue()-1)*2);
-        destination=new Point(0,0);
-        do {
-            ArrayList<Point> path = robot.findPath(current, destination, false);
-            result = robot.moving(path);
-            current = new Point((robot.getStreet()-1) * 2, (robot.getAvenue()-1) * 2);
-        } while (!current.equals(destination));
-        robot.log("Ready to turn off");
-        robot.turnOff();
-        while (true){
+        // robot.log("Searching for people...");
+       
+        // robot.log("Finished");
+        // robot.setDestiny(true);
+        // robot.rescuingPeople();
+        // robot.log("Finished RescuingPeople");
+        // current.setX((robot.getStreet()-1)*2);
+        // current.setY((robot.getAvenue()-1)*2);
+        // destination=new Point(0,0);
+        // do {
+        //     ArrayList<Point> path = robot.findPath(current, destination, false);
+        //     result = robot.moving(path);
+        //     current = new Point((robot.getStreet()-1) * 2, (robot.getAvenue()-1) * 2);
+        // } while (!current.equals(destination));
+        // robot.log("Ready to turn off");
+        // robot.turnOff();
+        // while (true){
 
-        }
+        // }
         // robot.rescuePeople();
         // robot.setState(new ReturningState());
     }
