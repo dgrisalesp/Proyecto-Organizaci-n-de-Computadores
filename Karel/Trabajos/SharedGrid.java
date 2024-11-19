@@ -39,22 +39,22 @@ private final Queue<Point> crucesL=new LinkedList<>();
 private final int robots;
 private  int completed;
 public synchronized void addBeeper(int x, int y) {
-    beepersL.add(new Point(x, y));
+    this.beepersL.add(new Point(x, y));
 }
 public synchronized Point takeBeeper() {
-    return beepersL.poll();
+    return this.beepersL.poll();
 }
 public synchronized void addCruce(int x, int y) {
-    crucesL.add(new Point(x, y));
+    this.crucesL.add(new Point(x, y));
 }
 public synchronized Point takeCruce() {
-    return crucesL.poll();
+    return this.crucesL.poll();
 }
 public synchronized boolean isBeeper() {
-    return beepersL.size() > 0;
+    return this.beepersL.size() > 0;
 }
 public synchronized boolean isCruce() {
-    return crucesL.size() > 0;
+    return this.crucesL.size() > 0;
 }
 
 public synchronized byte[][] getGrid() {
