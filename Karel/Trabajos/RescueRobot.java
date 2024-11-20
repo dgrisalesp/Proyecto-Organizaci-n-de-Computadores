@@ -409,6 +409,12 @@ class RescueRobot extends Robot implements Runnable {
             }
             
         }
+        if (anyBeepersInBeeperBag()) {
+            this.goTo(1, 2);
+            while (anyBeepersInBeeperBag()) {
+                putBeeper();
+            }
+        }
         this.goTo(this.robotId, 1);
         turnOff();
     }
